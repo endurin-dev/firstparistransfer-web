@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { FaCar, FaFacebookF, FaInstagram, FaEnvelope, FaGlobe } from 'react-icons/fa';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -66,9 +67,16 @@ export default function Header() {
           <div className="flex items-center justify-between px-6 py-5 lg:px-10 lg:py-6">
 
             <Link href="/" className="flex items-center gap-3 lg:gap-4">
-              <div className="p-3 rounded-xl lg:rounded-2xl bg-white/30 border border-white/40">
-                <FaCar className="w-5 h-5 lg:w-6 lg:h-6 text-black" />
-              </div>
+              <div className="relative w-10 h-10 lg:w-14 lg:h-14 rounded-xl lg:rounded-2xl bg-white/30 border border-white/40 overflow-hidden">
+  <Image
+    src="/images/logo-fpt-glaasy.webp"
+    alt="First Paris Transfer – Luxury Chauffeur Service Paris"
+    fill
+    className="object-contain p-1"
+    priority
+  />
+</div>
+
               <div>
                 <h1 className="text-black font-semibold text-base lg:text-xl tracking-tight">First Paris Transfer</h1>
                 <p className="text-black/70 text-xs tracking-widest uppercase hidden lg:block">Luxury Chauffeur</p>

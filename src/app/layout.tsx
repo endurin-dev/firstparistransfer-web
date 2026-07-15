@@ -2,8 +2,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import Header from './(site)/components/Header';
+import Footer from './(site)/components/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -85,22 +85,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body
-        className={`${inter.className} bg-black text-white antialiased overflow-x-hidden`}
-      >
-        <div className="relative min-h-screen">
-          <Header />
-          <main className="relative">{children}</main>
-          <Footer />
-        </div>
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }

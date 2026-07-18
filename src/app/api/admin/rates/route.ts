@@ -12,7 +12,11 @@ export async function GET(req: Request) {
       ...(fromLocationId ? { fromLocationId } : {}),
       ...(toLocationId ? { toLocationId } : {}),
     },
-    include: { fromLocation: true, toLocation: true, vehicle: true },
+    include: {
+      Location_Rate_fromLocationIdToLocation: true,
+      Location_Rate_toLocationIdToLocation: true,
+      Vehicle: true,
+    },
     orderBy: { updatedAt: "desc" },
   });
   return NextResponse.json(rates);

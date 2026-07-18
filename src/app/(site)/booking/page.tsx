@@ -198,7 +198,7 @@ function BookingForm() {
       if (resolvedTo) setTo(resolvedTo);
     }
 
-    const passengerParts = [];
+   const passengerParts: string[] = [];
     if (adults && adults !== "0") passengerParts.push(`${adults} adult${adults === "1" ? "" : "s"}`);
     if (children && children !== "0") passengerParts.push(`${children} child${children === "1" ? "" : "ren"}`);
     if (infants && infants !== "0") passengerParts.push(`${infants} infant${infants === "1" ? "" : "s"}`);

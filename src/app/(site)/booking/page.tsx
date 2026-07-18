@@ -1,8 +1,10 @@
 // src/app/booking/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 import { motion } from "framer-motion";
 import {
   Car,
@@ -16,8 +18,26 @@ import {
   Phone,
   CheckCircle,
   ArrowRight,
-  Star,
+  Users,
+  Briefcase,
+  Wifi,
+  Baby,
+  Snowflake,
+  Plane,
 } from "lucide-react";
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
+});
 
 interface Vehicle {
   id: string;
@@ -46,7 +66,10 @@ interface RouteRate {
   isRoutePrice: boolean;
 }
 
-export default function BookingPage() {
+function BookingForm() {
+  const searchParams = useSearchParams();
+  const prefilledRef = useRef(false);
+
   const [step, setStep] = useState(1);
 
   // Master data (loaded from the admin panel via API)
@@ -98,6 +121,17 @@ export default function BookingPage() {
     return "";
   };
 
+  // Look up a location id from a display name (case-insensitive) — used to
+  // resolve the plain-text from/to sent by the homepage quote widget.
+  const locationIdByName = (rawName: string) => {
+    const target = rawName.trim().toLowerCase();
+    for (const grp of allLocations) {
+      const item = grp.items.find((i) => i.name.trim().toLowerCase() === target);
+      if (item) return item.id;
+    }
+    return "";
+  };
+
   // Fetch route-specific pricing whenever From/To changes (set in the Rates admin page)
   useEffect(() => {
     if (!from || !to) {
@@ -131,6 +165,56 @@ export default function BookingPage() {
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
 
+  // Prefill from the query params the homepage quote widget sends
+  // (?tripType=&from=&to=&date=&time=&adults=&children=&infants=), once
+  // locations have loaded so from/to names can be resolved to IDs. Runs once.
+  useEffect(() => {
+    if (prefilledRef.current || allLocations.length === 0) return;
+    if (![...searchParams.keys()].length) return;
+
+    const tripTypeParam = searchParams.get("tripType");
+    const fromParam = searchParams.get("from");
+    const toParam = searchParams.get("to");
+    const dateParam = searchParams.get("date");
+    const timeParam = searchParams.get("time");
+    const adults = searchParams.get("adults");
+    const children = searchParams.get("children");
+    const infants = searchParams.get("infants");
+
+    if (tripTypeParam && ["One Way – Arrival", "One Way – Departure", "Round Trip"].includes(tripTypeParam)) {
+      setTripType(tripTypeParam);
+    }
+    if (dateParam) setDate(dateParam);
+    if (timeParam) setTime(timeParam);
+
+    let resolvedFrom = "";
+    let resolvedTo = "";
+    if (fromParam) {
+      resolvedFrom = locationIdByName(fromParam);
+      if (resolvedFrom) setFrom(resolvedFrom);
+    }
+    if (toParam) {
+      resolvedTo = locationIdByName(toParam);
+      if (resolvedTo) setTo(resolvedTo);
+    }
+
+    const passengerParts = [];
+    if (adults && adults !== "0") passengerParts.push(`${adults} adult${adults === "1" ? "" : "s"}`);
+    if (children && children !== "0") passengerParts.push(`${children} child${children === "1" ? "" : "ren"}`);
+    if (infants && infants !== "0") passengerParts.push(`${infants} infant${infants === "1" ? "" : "s"}`);
+    if (passengerParts.length) {
+      setNote((prev) => (prev ? prev : `Passengers: ${passengerParts.join(", ")}`));
+    }
+
+    // If the quote widget already gave us a complete itinerary, skip straight
+    // to vehicle selection instead of making the rider re-enter it.
+    if (resolvedFrom && resolvedTo && dateParam && timeParam) {
+      setStep(2);
+    }
+
+    prefilledRef.current = true;
+  }, [allLocations, searchParams]);
+
   const isStep1Valid = from && to && date && time;
   const isStep3Valid = name && email && phone;
 
@@ -145,7 +229,7 @@ export default function BookingPage() {
     Vehicle: selectedVehicle?.name || "",
     Passengers: selectedVehicle ? `${selectedVehicle.passengers} passengers` : "",
     Luggage: selectedVehicle ? `${selectedVehicle.luggage} pieces` : "",
-    Price: selectedVehicle ? `$${currentPrice}` : "",
+    Price: selectedVehicle ? `€${currentPrice}` : "",
     Name: name,
     Country: country,
     Phone: phone,
@@ -200,154 +284,210 @@ export default function BookingPage() {
     }
   };
 
+  const steps = [
+    { number: 1, label: "Itinerary" },
+    { number: 2, label: "Vehicle" },
+    { number: 3, label: "Passenger" },
+  ];
+
+  const vehicleBadges = (v: Vehicle) => [
+    { icon: Users, label: `${v.passengers} Passengers` },
+    { icon: Briefcase, label: `${v.luggage} Luggage` },
+    { icon: Wifi, label: "Wi-Fi" },
+    { icon: Baby, label: "Baby Seat" },
+    { icon: Snowflake, label: "Climate Control" },
+  ];
+
   return (
-    <section className="min-h-screen bg-gray-50 pt-40 pb-20 px-4">
+    <section
+      className={`${inter.variable} ${cormorant.variable} font-[family-name:var(--font-body)] min-h-screen pt-40 pb-24 px-4 relative`}
+      style={{
+        background:
+          "radial-gradient(1100px 500px at 50% -10%, rgba(201,166,103,0.08), transparent), #0a0a0a",
+      }}
+    >
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-          <h1 className="text-4xl font-semibold text-gray-900 mb-2">Book Your Private Transfer</h1>
-          <p className="text-lg text-gray-600">Premium chauffeur service in Paris • Instant confirmation</p>
+        {/* Masthead */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-14"
+        >
+          <p className="text-[11px] tracking-[0.35em] uppercase text-[#C9A667] mb-4">
+            Paris · Private Chauffeur
+          </p>
+          <h1 className="font-[family-name:var(--font-display)] italic text-5xl md:text-6xl text-[#F5F3EF] mb-3 tracking-tight">
+            Reserve Your Transfer
+          </h1>
+          <p className="text-sm md:text-base text-[#8B8A8F]">
+            A private car, a fixed fare, and a driver waiting for you — confirmed in three steps.
+          </p>
         </motion.div>
 
         {loadingData ? (
-          <p className="text-center text-gray-500">Loading booking options...</p>
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-8 h-8 rounded-full border border-[#C9A667]/30 border-t-[#C9A667] animate-spin" />
+            <p className="text-[#8B8A8F] text-sm tracking-wide">Preparing your booking options…</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10">
             {!bookingSuccess && (
               <>
                 <div className="lg:col-span-2">
-                  {/* Progress Bar */}
-                  <div className="flex items-center justify-between mb-8 px-6 py-4 bg-gray-200/20 backdrop-blur-lg border border-white/20 rounded-3xl shadow-lg relative">
-                    {[
-                      { number: 1, label: "Trip Details" },
-                      { number: 2, label: "Select Vehicle" },
-                      { number: 3, label: "Passenger Info" },
-                    ].map((s, idx) => (
-                      <div key={s.number} className="flex-1 flex flex-col items-center relative">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-500
-                            ${step === s.number ? "bg-yellow-400 text-black shadow-xl" : step > s.number ? "bg-yellow-300 text-black" : "bg-white/50 text-gray-700"}`}
-                        >
-                          {step > s.number ? <CheckCircle className="w-5 h-5" /> : s.number}
+                  {/* Progress Tracker */}
+                  <div className="mb-10 px-1">
+                    <div className="flex items-center justify-between">
+                      {steps.map((s, idx) => (
+                        <div key={s.number} className="flex items-center flex-1 last:flex-none">
+                          <div className="flex flex-col items-center gap-2">
+                            <div
+                              className={`w-9 h-9 rounded-full flex items-center justify-center border font-[family-name:var(--font-display)] text-base transition-colors duration-300 ${
+                                step === s.number
+                                  ? "border-[#C9A667] bg-[#C9A667] text-[#0a0a0a]"
+                                  : step > s.number
+                                  ? "border-[#C9A667]/60 text-[#C9A667] bg-transparent"
+                                  : "border-white/15 text-[#8B8A8F]"
+                              }`}
+                            >
+                              {step > s.number ? <CheckCircle className="w-4 h-4" /> : `0${s.number}`}
+                            </div>
+                            <span
+                              className={`text-[10px] tracking-[0.2em] uppercase ${
+                                step >= s.number ? "text-[#F5F3EF]" : "text-[#8B8A8F]"
+                              }`}
+                            >
+                              {s.label}
+                            </span>
+                          </div>
+                          {idx < steps.length - 1 && (
+                            <div className="flex-1 h-px mx-3 bg-white/10 relative -mt-5">
+                              <div
+                                className="absolute inset-y-0 left-0 bg-[#C9A667] transition-all duration-500"
+                                style={{ width: step > s.number ? "100%" : "0%" }}
+                              />
+                            </div>
+                          )}
                         </div>
-                        <span className="mt-2 text-xs text-gray-900 font-bold">{s.label}</span>
-                        {idx < 2 && (
-                          <div
-                            className={`absolute top-4 left-1/2 w-full h-1 -translate-x-1/2 bg-white/40 rounded-full ${step > s.number ? "bg-yellow-400" : "bg-gray-300"}`}
-                            style={{ zIndex: -1 }}
-                          />
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                   <motion.div
                     key={step}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="bg-white/80 backdrop-blur-lg border border-gray-200 rounded-2xl shadow-lg p-6"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="bg-[#131215] border border-white/[0.06] rounded-2xl shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] p-6 md:p-8"
                   >
                     {/* Step 1 */}
                     {step === 1 && (
-                      <div className="space-y-6">
+                      <div className="space-y-7">
                         <div>
-                          <h2 className="text-2xl font-semibold text-black mb-1">Trip Details</h2>
-                          <p className="text-black text-sm">Where and when do you need a ride?</p>
+                          <h2 className="font-[family-name:var(--font-display)] italic text-2xl text-[#F5F3EF] mb-1">
+                            Your Itinerary
+                          </h2>
+                          <p className="text-[#8B8A8F] text-sm">Where and when should your driver be ready?</p>
                         </div>
-                        <div className="grid gap-4">
+
+                        {/* Trip type — segmented control */}
+                        <div>
+                          <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                            <Car className="w-3.5 h-3.5 text-[#C9A667]" /> Trip Type
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {["One Way – Arrival", "One Way – Departure", "Round Trip"].map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setTripType(opt)}
+                                className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors duration-200 ${
+                                  tripType === opt
+                                    ? "bg-[#C9A667] text-[#0a0a0a] border-[#C9A667]"
+                                    : "bg-white/[0.03] text-[#D9D7D2] border-white/10 hover:border-[#C9A667]/40"
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-sm font-medium text-black mb-1 flex items-center gap-1">
-                              <Car className="w-4 h-4 text-yellow-600" /> Trip Type
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5 text-[#C9A667]" /> From
                             </label>
                             <select
-                              value={tripType}
-                              onChange={(e) => setTripType(e.target.value)}
-                              className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
+                              value={from}
+                              onChange={(e) => setFrom(e.target.value)}
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] text-sm outline-none appearance-none"
                             >
-                              <option>One Way – Arrival</option>
-                              <option>One Way – Departure</option>
-                              <option>Round Trip</option>
+                              <option value="" className="bg-[#131215]">Select pickup location…</option>
+                              {allLocations.map((cat, catIdx) => (
+                                <optgroup key={`${cat.category}-${catIdx}`} label={cat.category} className="bg-[#131215]">
+                                  {cat.items.map((loc, idx) => (
+                                    <option key={loc.id ?? `${cat.category}-${idx}`} value={loc.id} className="bg-[#131215]">
+                                      {loc.name}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
                             </select>
                           </div>
-
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-black mb-1 flex items-center gap-1">
-                                <MapPin className="w-4 h-4 text-yellow-600" /> From
-                              </label>
-                              <select
-                                value={from}
-                                onChange={(e) => setFrom(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
-                              >
-                                <option value="">Select pickup location...</option>
+                          <div>
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5 text-[#C9A667]" /> To
+                            </label>
+                            <select
+                              value={to}
+                              onChange={(e) => setTo(e.target.value)}
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] text-sm outline-none appearance-none"
+                            >
+                              <option value="" className="bg-[#131215]">Select destination…</option>
                               {allLocations.map((cat, catIdx) => (
-  <optgroup key={`${cat.category}-${catIdx}`} label={cat.category}>
-    {cat.items.map((loc, idx) => (
-      <option key={loc.id ?? `${cat.category}-${idx}`} value={loc.id}>
-        {loc.name}
-      </option>
-    ))}
-  </optgroup>
-))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-black mb-1 flex items-center gap-1">
-                                <MapPin className="w-4 h-4 text-yellow-600" /> To
-                              </label>
-                              <select
-                                value={to}
-                                onChange={(e) => setTo(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
-                              >
-                                <option value="">Select destination...</option>
-   {allLocations.map((cat, catIdx) => (
-  <optgroup key={`${cat.category}-${catIdx}`} label={cat.category}>
-    {cat.items.map((loc, idx) => (
-      <option key={loc.id ?? `${cat.category}-${idx}`} value={loc.id}>
-        {loc.name}
-      </option>
-    ))}
-  </optgroup>
-))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-black mb-1 flex items-center gap-1">
-                                <Calendar className="w-4 h-4 text-yellow-600" /> Date
-                              </label>
-                              <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-black mb-1 flex items-center gap-1">
-                                <Clock className="w-4 h-4 text-yellow-600" /> Pickup Time
-                              </label>
-                              <input
-                                type="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
-                              />
-                            </div>
+                                <optgroup key={`${cat.category}-${catIdx}`} label={cat.category} className="bg-[#131215]">
+                                  {cat.items.map((loc, idx) => (
+                                    <option key={loc.id ?? `${cat.category}-${idx}`} value={loc.id} className="bg-[#131215]">
+                                      {loc.name}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
                           </div>
                         </div>
 
-                        <div className="flex justify-end pt-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <Calendar className="w-3.5 h-3.5 text-[#C9A667]" /> Date
+                            </label>
+                            <input
+                              type="date"
+                              value={date}
+                              onChange={(e) => setDate(e.target.value)}
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] text-sm outline-none [color-scheme:dark]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5 text-[#C9A667]" /> Pickup Time
+                            </label>
+                            <input
+                              type="time"
+                              value={time}
+                              onChange={(e) => setTime(e.target.value)}
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] text-sm outline-none [color-scheme:dark]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
                           <button
                             onClick={() => setStep(2)}
                             disabled={!isStep1Valid}
-                            className="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md flex items-center gap-2 disabled:opacity-50"
+                            className="w-full sm:w-auto px-8 py-3.5 bg-[#C9A667] hover:bg-[#E4C98F] text-[#0a0a0a] font-medium rounded-xl shadow-lg shadow-[#C9A667]/10 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-200"
                           >
                             Choose Vehicle <ArrowRight className="w-4 h-4" />
                           </button>
@@ -357,59 +497,55 @@ export default function BookingPage() {
 
                     {/* Step 2 */}
                     {step === 2 && (
-                      <div className="space-y-6">
+                      <div className="space-y-7">
                         <div>
-                          <h2 className="text-2xl font-semibold text-black mb-1">Select Your Vehicle</h2>
-                          <p className="text-black/70 text-sm">Choose the perfect car for your journey</p>
+                          <h2 className="font-[family-name:var(--font-display)] italic text-2xl text-[#F5F3EF] mb-1">
+                            Select Your Vehicle
+                          </h2>
+                          <p className="text-[#8B8A8F] text-sm">Every car is chauffeur-driven, insured, and immaculate</p>
                         </div>
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {vehicles.map((v) => {
                             const price = priceFor(v.id, v.basePrice);
+                            const selected = selectedVehicle?.id === v.id;
                             return (
                               <motion.div
                                 key={v.id}
-                                whileHover={{ y: -6 }}
+                                whileHover={{ y: -4 }}
+                                transition={{ duration: 0.2 }}
                                 onClick={() => setSelectedVehicle(v)}
-                                className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                                  selectedVehicle?.id === v.id
-                                    ? "border-yellow-500 shadow-lg ring-2 ring-yellow-200"
-                                    : "border-gray-200 shadow-sm hover:shadow-md"
+                                className={`cursor-pointer rounded-2xl overflow-hidden border transition-colors duration-200 ${
+                                  selected
+                                    ? "border-[#C9A667] shadow-[0_0_0_1px_rgba(201,166,103,0.4)]"
+                                    : "border-white/10 hover:border-white/25"
                                 }`}
                               >
-                                <div className="relative h-36 w-full">
-                                  <Image src={v.image} alt={v.name} fill className="object-cover" />
-                                  {selectedVehicle?.id === v.id && (
-                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                      <CheckCircle className="w-12 h-12 text-white" />
+                                <div className="relative h-36 w-full bg-black/40">
+                                  <Image src={v.image} alt={v.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+                                  {selected && (
+                                    <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[#C9A667] flex items-center justify-center">
+                                      <CheckCircle className="w-4 h-4 text-[#0a0a0a]" />
                                     </div>
                                   )}
                                 </div>
-                                <div className="p-4 bg-gradient-to-b from-white to-gray-50 space-y-2">
-                                  <h3 className="text-lg font-semibold text-black">{v.name}</h3>
-                                  <p className="text-black/70 text-sm">{v.type}</p>
-
-                                  <div className="flex flex-wrap gap-2 mt-1 text-xs">
-                                    <span className="px-2 py-1 bg-gray-100 rounded-full text-black flex items-center gap-1">
-                                      <User className="w-3 h-3" /> {v.passengers} Passengers
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 rounded-full text-black flex items-center gap-1">
-                                      <Flag className="w-3 h-3" /> {v.luggage} Luggage
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 rounded-full text-black flex items-center gap-1">
-                                      <Star className="w-3 h-3" /> Wi-Fi
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 rounded-full text-black flex items-center gap-1">
-                                      <CheckCircle className="w-3 h-3" /> Baby Seat
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 rounded-full text-black flex items-center gap-1">
-                                      <Clock className="w-3 h-3" /> AC
-                                    </span>
+                                <div className="p-4 bg-[#16151A] space-y-3">
+                                  <div>
+                                    <h3 className="font-[family-name:var(--font-display)] text-xl text-[#F5F3EF]">{v.name}</h3>
+                                    <p className="text-[#8B8A8F] text-xs tracking-wide">{v.type}</p>
                                   </div>
 
-                                  <div className="mt-2 flex justify-between items-center">
-                                    <span className="font-extrabold text-3xl text-yellow-500">${price}</span>
-                                    {selectedVehicle?.id === v.id && <CheckCircle className="w-5 h-5 text-green-600" />}
+                                  <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                                    {vehicleBadges(v).map((b, i) => (
+                                      <span key={i} className="flex items-center gap-1 text-[10px] tracking-wide text-[#B5B3AE]">
+                                        <b.icon className="w-3 h-3 text-[#C9A667]" /> {b.label}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  <div className="pt-2 border-t border-white/[0.06] flex justify-between items-baseline">
+                                    <span className="text-[10px] uppercase tracking-[0.15em] text-[#8B8A8F]">Fixed fare</span>
+                                    <span className="font-[family-name:var(--font-display)] text-2xl text-[#C9A667]">€{price}</span>
                                   </div>
                                 </div>
                               </motion.div>
@@ -417,14 +553,17 @@ export default function BookingPage() {
                           })}
                         </div>
 
-                        <div className="flex justify-between pt-4">
-                          <button onClick={() => setStep(1)} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-black font-semibold rounded-lg">
+                        <div className="flex justify-between pt-2">
+                          <button
+                            onClick={() => setStep(1)}
+                            className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#D9D7D2] font-medium rounded-xl border border-white/10 transition-colors duration-200"
+                          >
                             ← Back
                           </button>
                           <button
                             onClick={() => setStep(3)}
                             disabled={!selectedVehicle}
-                            className="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg flex items-center gap-2 disabled:opacity-50"
+                            className="px-8 py-3.5 bg-[#C9A667] hover:bg-[#E4C98F] text-[#0a0a0a] font-medium rounded-xl flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-200"
                           >
                             Continue <ArrowRight className="w-4 h-4" />
                           </button>
@@ -434,86 +573,91 @@ export default function BookingPage() {
 
                     {/* Step 3 */}
                     {step === 3 && !bookingSuccess && (
-                      <div className="space-y-6">
+                      <div className="space-y-7">
                         <div>
-                          <h2 className="text-2xl font-semibold text-gray-900 mb-1">Passenger Information</h2>
-                          <p className="text-gray-600 text-sm">Almost there! Just a few details</p>
+                          <h2 className="font-[family-name:var(--font-display)] italic text-2xl text-[#F5F3EF] mb-1">
+                            Passenger Details
+                          </h2>
+                          <p className="text-[#8B8A8F] text-sm">Your driver will have these on file for pickup</p>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-1 flex items-center gap-1">
-                              <User className="w-4 h-4 text-yellow-600" /> Full Name
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <User className="w-3.5 h-3.5 text-[#C9A667]" /> Full Name
                             </label>
                             <input
                               type="text"
                               value={name}
                               onChange={(e) => setName(e.target.value)}
                               placeholder="John Doe"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] placeholder:text-[#6B6B6E] text-sm outline-none"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-1 flex items-center gap-1">
-                              <Flag className="w-4 h-4 text-yellow-600" /> Country
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <Flag className="w-3.5 h-3.5 text-[#C9A667]" /> Country
                             </label>
                             <input
                               type="text"
                               value={country}
                               onChange={(e) => setCountry(e.target.value)}
                               placeholder="France"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] placeholder:text-[#6B6B6E] text-sm outline-none"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-1 flex items-center gap-1">
-                              <Mail className="w-4 h-4 text-yellow-600" /> Email
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <Mail className="w-3.5 h-3.5 text-[#C9A667]" /> Email
                             </label>
                             <input
                               type="email"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               placeholder="john@example.com"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] placeholder:text-[#6B6B6E] text-sm outline-none"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-1 flex items-center gap-1">
-                              <Phone className="w-4 h-4 text-yellow-600" /> Phone Number
+                            <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                              <Phone className="w-3.5 h-3.5 text-[#C9A667]" /> Phone Number
                             </label>
                             <input
                               type="tel"
                               value={phone}
                               onChange={(e) => setPhone(e.target.value)}
                               placeholder="+33 6 12 34 56 78"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 text-black"
+                              className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] text-[#F5F3EF] placeholder:text-[#6B6B6E] text-sm outline-none"
                             />
                           </div>
                         </div>
 
-                        <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-900 mb-1 flex items-center gap-1">
-                            <FileText className="w-4 h-4 text-yellow-600" /> Special Requests (Optional)
+                        <div>
+                          <label className="text-[11px] tracking-[0.15em] uppercase text-[#8B8A8F] mb-2 flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5 text-[#C9A667]" /> Special Requests (Optional)
                           </label>
                           <textarea
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                             rows={3}
-                            placeholder="Child seat needed • Flight number: AF123..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-300 resize-none text-black"
+                            placeholder="Child seat needed • Flight number: AF123…"
+                            className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-1 focus:ring-[#C9A667] focus:border-[#C9A667] resize-none text-[#F5F3EF] placeholder:text-[#6B6B6E] text-sm outline-none"
                           />
                         </div>
 
-                        <div className="flex justify-between pt-4">
-                          <button onClick={() => setStep(2)} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg">
+                        <div className="flex justify-between pt-2">
+                          <button
+                            onClick={() => setStep(2)}
+                            className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#D9D7D2] font-medium rounded-xl border border-white/10 transition-colors duration-200"
+                          >
                             ← Back
                           </button>
                           <button
                             onClick={submitBooking}
                             disabled={!isStep3Valid || submitting}
-                            className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg flex items-center gap-2 disabled:opacity-50"
+                            className="px-8 py-3.5 bg-[#C9A667] hover:bg-[#E4C98F] text-[#0a0a0a] font-medium rounded-xl flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-200"
                           >
-                            <CheckCircle className="w-5 h-5" /> {submitting ? "Booking..." : "Complete Booking"}
+                            <CheckCircle className="w-4.5 h-4.5" /> {submitting ? "Confirming…" : "Confirm Booking"}
                           </button>
                         </div>
                       </div>
@@ -521,69 +665,38 @@ export default function BookingPage() {
                   </motion.div>
                 </div>
 
-                {/* Summary Sidebar */}
-                <div className="lg:sticky lg:top-20 h-fit">
-                  <div className="bg-gray-900 text-white rounded-xl shadow-lg overflow-hidden border border-yellow-600/20">
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-1">
-                        <Star className="w-5 h-5 text-yellow-400" /> Booking Summary
-                      </h3>
-                      <div className="space-y-1 text-xs">
-                        {Object.entries(summary).map(
-                          ([key, value]) =>
-                            value && (
-                              <div key={key} className="flex justify-between border-b border-gray-700 py-1">
-                                <span className="text-gray-400">{key}</span>
-                                <span className="font-medium">{value}</span>
-                              </div>
-                            )
-                        )}
-                      </div>
-                      {selectedVehicle && (
-                        <div className="mt-2 pt-2 border-t border-gray-700">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold">Total Price</span>
-                            <span className="text-xl font-bold text-yellow-400">${currentPrice}</span>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1">Includes all taxes & fees • Free cancellation</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="bg-yellow-500 px-4 py-2 text-center">
-                      <p className="font-semibold text-black text-xs">Trusted by 50,000+ travelers</p>
-                      <p className="text-black/80 text-[10px]">5.0 ★★★★★ on Trustpilot</p>
-                    </div>
-                  </div>
+                {/* Summary Sidebar — voyage dossier */}
+                <div className="lg:sticky lg:top-24 h-fit">
+                  <DossierCard summary={summary} currentPrice={currentPrice} selectedVehicle={selectedVehicle} />
                 </div>
               </>
             )}
 
-            {/* Success Message */}
+            {/* Success State */}
             {bookingSuccess && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-4xl mx-auto bg-white/70 backdrop-blur-lg border border-green-400 text-green-900 p-8 rounded-2xl shadow-lg lg:col-span-3"
+                transition={{ duration: 0.4 }}
+                className="w-full max-w-xl mx-auto lg:col-span-3"
               >
-                <h2 className="text-3xl font-bold mb-4 flex items-center gap-2 justify-center">
-                  <CheckCircle className="w-6 h-6" /> Booking Confirmed!
-                </h2>
-                <p className="mb-6 text-center">Your private transfer has been successfully booked. Here are your booking details:</p>
-                <div className="space-y-2 text-sm">
-                  {Object.entries(summary).map(
-                    ([key, value]) =>
-                      value && (
-                        <div key={key} className="flex justify-between border-b border-green-200 py-1">
-                          <span className="font-semibold">{key}</span>
-                          <span>{value}</span>
-                        </div>
-                      )
-                  )}
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 mx-auto mb-4 rounded-full border border-[#C9A667] flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-[#C9A667]" />
+                  </div>
+                  <h2 className="font-[family-name:var(--font-display)] italic text-3xl text-[#F5F3EF] mb-2">
+                    Booking Confirmed
+                  </h2>
+                  <p className="text-[#8B8A8F] text-sm">A confirmation with your chauffeur's details will arrive by email shortly.</p>
                 </div>
-                <p className="mt-6 font-semibold text-center">You will receive a confirmation email shortly.</p>
 
-                <div className="mt-6 text-center">
-                  <button onClick={resetBooking} className="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg">
+                <DossierCard summary={summary} currentPrice={currentPrice} selectedVehicle={selectedVehicle} />
+
+                <div className="mt-8 text-center">
+                  <button
+                    onClick={resetBooking}
+                    className="px-8 py-3.5 bg-[#C9A667] hover:bg-[#E4C98F] text-[#0a0a0a] font-medium rounded-xl transition-colors duration-200"
+                  >
                     Book Another Transfer
                   </button>
                 </div>
@@ -593,5 +706,84 @@ export default function BookingPage() {
         )}
       </div>
     </section>
+  );
+}
+
+// Signature element: a boarding-pass style "voyage dossier" — used for both the
+// live booking summary and the confirmation receipt, so the same object a rider
+// builds during checkout becomes the document they keep.
+function DossierCard({
+  summary,
+  currentPrice,
+  selectedVehicle,
+}: {
+  summary: Record<string, string>;
+  currentPrice: number;
+  selectedVehicle: Vehicle | null;
+}) {
+  return (
+    <div className="rounded-2xl overflow-hidden border border-[#C9A667]/20 bg-[#131215]">
+      <div className="p-6 pb-5">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-full border border-[#C9A667]/50 flex items-center justify-center">
+              <Plane className="w-3.5 h-3.5 text-[#C9A667]" />
+            </span>
+            <span className="font-[family-name:var(--font-display)] italic text-lg text-[#F5F3EF]">
+              Voyage Dossier
+            </span>
+          </div>
+          <span className="text-[10px] tracking-[0.2em] uppercase text-[#6B6B6E]">Paris</span>
+        </div>
+
+        <div className="space-y-0">
+          {Object.entries(summary).map(
+            ([key, value]) =>
+              value && (
+                <div key={key} className="flex justify-between items-baseline py-2 border-b border-white/[0.05]">
+                  <span className="text-[10px] tracking-[0.15em] uppercase text-[#6B6B6E]">{key}</span>
+                  <span className="text-sm text-[#E8E6E1] font-medium text-right ml-4">{value}</span>
+                </div>
+              )
+          )}
+        </div>
+
+        {selectedVehicle && (
+          <div className="mt-5 flex justify-between items-center">
+            <span className="text-xs tracking-wide text-[#8B8A8F]">Total Fare</span>
+            <span className="font-[family-name:var(--font-display)] text-3xl text-[#C9A667]">€{currentPrice}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Perforation */}
+      <div
+        className="h-0 border-t border-dashed border-[#C9A667]/25 relative"
+        aria-hidden="true"
+      >
+        <span className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-[#0a0a0a]" />
+        <span className="absolute -right-3 -top-3 w-6 h-6 rounded-full bg-[#0a0a0a]" />
+      </div>
+
+      <div className="px-6 py-4 flex items-center justify-between">
+        <p className="text-[10px] tracking-[0.15em] uppercase text-[#6B6B6E]">
+          Fixed fare · free cancellation
+        </p>
+        <div className="flex gap-[2px] items-end" aria-hidden="true">
+          {[3, 5, 2, 6, 3, 4, 2, 5, 3, 6, 2, 4].map((h, i) => (
+            <span key={i} className="w-[2px] bg-[#6B6B6E]/50" style={{ height: `${h * 2}px` }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// useSearchParams requires a Suspense boundary in the app router.
+export default function BookingPage() {
+  return (
+    <Suspense fallback={null}>
+      <BookingForm />
+    </Suspense>
   );
 }

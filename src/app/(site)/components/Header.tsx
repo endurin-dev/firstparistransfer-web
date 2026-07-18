@@ -3,22 +3,32 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { Cormorant_Garamond } from 'next/font/google';
 import { FaFacebookF, FaInstagram, FaEnvelope } from 'react-icons/fa';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  style: ['italic'],
+  variable: '--font-display',
+});
 
 export default function Header() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // 'Reservation' sits in the middle of the set so it reads as the nav's
+  // center of gravity rather than a trailing afterthought.
   const navItems = [
     'Home',
     'Rates',
     'Destinations',
+    'Reservation',
     'Blog',
     'Contact Us',
-    'Reservation',
   ];
 
   useEffect(() => {
@@ -47,7 +57,7 @@ export default function Header() {
   };
 
   return (
-    <>
+    <div className={cormorant.variable}>
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998]"
@@ -68,7 +78,7 @@ export default function Header() {
           <div className="flex items-center justify-between px-5 py-3 lg:px-8 lg:py-3">
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 lg:gap-3">
+            <Link href="/" className="flex items-center gap-2 lg:gap-3 shrink-0">
               <div className="relative w-9 h-9 lg:w-11 lg:h-11 rounded-xl bg-white/30 border border-white/40 overflow-hidden">
                 <Image
                   src="/images/logo-fpt-glaasy.webp"
@@ -80,26 +90,37 @@ export default function Header() {
               </div>
 
               <div>
-                <h1 className="text-black font-semibold text-sm lg:text-lg tracking-tight">
+                <h1 className="font-[family-name:var(--font-display)] italic font-semibold text-black text-lg lg:text-2xl tracking-tight leading-tight [text-shadow:0_0_1px_rgba(0,0,0,0.3)]">
                   First Paris Transfer
                 </h1>
-                <p className="text-black/70 text-[10px] tracking-widest uppercase hidden lg:block">
+                <p className="text-black/60 text-[9px] tracking-[0.25em] uppercase hidden lg:block">
                   Luxury Chauffeur
                 </p>
               </div>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item}
-                  href={getHref(item)}
-                  className="text-black/70 font-medium text-[13px] tracking-wide transition-all duration-300 hover:text-black hover:font-bold hover:scale-105"
-                >
-                  {item}
-                </Link>
-              ))}
+            <nav className="hidden lg:flex items-center gap-1">
+              {navItems.map((item) =>
+                item === 'Reservation' ? (
+                  <Link
+                    key={item}
+                    href={getHref(item)}
+                    className="group mx-3 flex items-center gap-1.5 bg-[#C9A667] hover:bg-[#B8935A] text-black text-[13px] font-semibold tracking-wide px-5 py-2.5 rounded-full shadow-md shadow-[#C9A667]/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-px"
+                  >
+                    {item}
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                  </Link>
+                ) : (
+                  <Link
+                    key={item}
+                    href={getHref(item)}
+                    className="px-4 py-2 text-black/70 font-medium text-[12px] tracking-[0.12em] uppercase transition-all duration-300 hover:text-black"
+                  >
+                    {item}
+                  </Link>
+                )
+              )}
             </nav>
 
             {/* Right Side */}
@@ -148,18 +169,30 @@ export default function Header() {
         >
           <div className="bg-white/20 backdrop-blur-3xl border border-white/40 rounded-3xl shadow-2xl overflow-hidden">
             <nav className="py-8 px-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item}
-                  href={getHref(item)}
-                  onClick={closeMenu}
-                  className="block py-4 text-black/80 text-lg hover:text-black font-medium"
-                >
-                  {item}
-                </Link>
-              ))}
+              {navItems.map((item) =>
+                item === 'Reservation' ? (
+                  <Link
+                    key={item}
+                    href={getHref(item)}
+                    onClick={closeMenu}
+                    className="flex items-center justify-center gap-2 my-3 bg-[#C9A667] hover:bg-[#B8935A] text-black text-base font-semibold tracking-wide py-3.5 rounded-2xl shadow-md shadow-[#C9A667]/30 transition-colors duration-300"
+                  >
+                    {item}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <Link
+                    key={item}
+                    href={getHref(item)}
+                    onClick={closeMenu}
+                    className="block py-4 text-black/80 text-lg font-[family-name:var(--font-display)] italic hover:text-black"
+                  >
+                    {item}
+                  </Link>
+                )
+              )}
 
-              <div className="flex justify-center gap-6 mt-8">
+              <div className="flex justify-center gap-6 mt-6">
                 <a href="#" className="text-black/50 hover:text-black">
                   <FaFacebookF className="w-5 h-5" />
                 </a>
@@ -177,6 +210,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-    </>
+    </div>
   );
 }

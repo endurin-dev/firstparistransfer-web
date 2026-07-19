@@ -66,7 +66,23 @@ export default function InstantBooking() {
   useEffect(() => {
     fetch("/api/locations")
       .then((r) => r.json())
-      .then((data: LocationGroup[]) => setLocationGroups(data))
+      .then((data: any[]) => {
+        // /api/locations returns a flat array of raw location rows
+        // ({ id, name, category, active, ... }), not pre-grouped data.
+        // Group them here into { category, items: string[] } so the
+        // <select> dropdowns below can render optgroups by category.
+        const locs = Array.isArray(data) ? data : [];
+        const grouped: Record<string, string[]> = {};
+        for (const loc of locs) {
+          if (!loc || loc.active === false) continue;
+          if (!grouped[loc.category]) grouped[loc.category] = [];
+          grouped[loc.category].push(loc.name);
+        }
+        const groupedArray: LocationGroup[] = Object.entries(grouped).map(
+          ([category, items]) => ({ category, items })
+        );
+        setLocationGroups(groupedArray);
+      })
       .catch(() => setLocationGroups([]))
       .finally(() => setLoadingLocations(false));
   }, []);

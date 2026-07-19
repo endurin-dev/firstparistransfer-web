@@ -2,6 +2,7 @@
 // Run with: npx tsx prisma/create-admin.ts   (or ts-node)
 import path from "node:path";
 import dotenv from "dotenv";
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -33,7 +34,7 @@ async function main() {
   const user = await prisma.user.upsert({
     where: { email },
     update: { password: hashed, name: name || undefined },
-    create: { email, password: hashed, name: name || undefined, role: "admin" },
+    create: { id: randomUUID(), email, password: hashed, name: name || undefined, role: "admin" },
   });
 
   console.log(`\nAdmin user ready: ${user.email}`);

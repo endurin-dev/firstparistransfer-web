@@ -77,27 +77,87 @@ function BookingForm() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [routeRates, setRouteRates] = useState<RouteRate[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/admin/locations").then((r) => r.json()),
-      fetch("/api/admin/vehicles").then((r) => r.json()),
-    ]).then(([locs, vehs]: [any[], Vehicle[]]) => {
-      // Group the flat locations list into { category, items: [{id, name}] }
-      const grouped: Record<string, LocationItem[]> = {};
-      for (const loc of locs) {
-        if (loc.active === false) continue;
-        if (!grouped[loc.category]) grouped[loc.category] = [];
-        grouped[loc.category].push({ id: loc.id, name: loc.name });
-      }
-      const groupedArray: LocationGroup[] = Object.entries(grouped).map(
-        ([category, items]) => ({ category, items })
-      );
+     fetch("/api/locations").then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`/api/locations returned ${r.status}`);
+        }
+        return r.json();
+      }),
+    fetch("/api/vehicles").then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`/api/vehicles returned ${r.status}`);
+        }
+        return r.json();
+      }),
+    ])
+      .then(([locsRes, vehsRes]: [any, any]) => {
+        // Normalize: accept either a bare array or a wrapped
+        // { locations: [...] } / { data: [...] } shape, since some API
+        // routes wrap results in an envelope object instead of returning
+        // a raw array.
+        const locs: any[] = Array.isArray(locsRes)
+          ? locsRes
+          : Array.isArray(locsRes?.locations)
+          ? locsRes.locations
+          : Array.isArray(locsRes?.data)
+          ? locsRes.data
+          : [];
 
-      setAllLocations(groupedArray);
-      setVehicles(vehs.filter((v: any) => v.active !== false));
-      setLoadingData(false);
-    });
+        const vehs: any[] = Array.isArray(vehsRes)
+          ? vehsRes
+          : Array.isArray(vehsRes?.vehicles)
+          ? vehsRes.vehicles
+          : Array.isArray(vehsRes?.data)
+          ? vehsRes.data
+          : [];
+
+        if (
+          !Array.isArray(locsRes) &&
+          !Array.isArray(locsRes?.locations) &&
+          !Array.isArray(locsRes?.data)
+        ) {
+          console.error(
+            "Unexpected /api/admin/locations response shape:",
+            locsRes
+          );
+        }
+        if (
+          !Array.isArray(vehsRes) &&
+          !Array.isArray(vehsRes?.vehicles) &&
+          !Array.isArray(vehsRes?.data)
+        ) {
+          console.error(
+            "Unexpected /api/admin/vehicles response shape:",
+            vehsRes
+          );
+        }
+
+        // Group the flat locations list into { category, items: [{id, name}] }
+        const grouped: Record<string, LocationItem[]> = {};
+        for (const loc of locs) {
+          if (!loc || loc.active === false) continue;
+          if (!grouped[loc.category]) grouped[loc.category] = [];
+          grouped[loc.category].push({ id: loc.id, name: loc.name });
+        }
+        const groupedArray: LocationGroup[] = Object.entries(grouped).map(
+          ([category, items]) => ({ category, items })
+        );
+
+        setAllLocations(groupedArray);
+        setVehicles(vehs.filter((v: any) => v && v.active !== false));
+        setLoadingData(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load booking data:", err);
+        setLoadError(
+          "We couldn't load booking options right now. Please refresh or try again shortly."
+        );
+        setLoadingData(false);
+      });
   }, []);
 
   // Step 1 — from/to now store location IDs (not names)
@@ -138,18 +198,29 @@ function BookingForm() {
       setRouteRates([]);
       return;
     }
-    fetch(
-      `/api/admin/rates?fromLocationId=${encodeURIComponent(from)}&toLocationId=${encodeURIComponent(to)}`
+   fetch(
+      `/api/rates?fromLocationId=${encodeURIComponent(from)}&toLocationId=${encodeURIComponent(to)}`
     )
       .then((r) => r.json())
-      .then((data: any[]) => {
+      .then((data: any) => {
+        const rates: any[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.rates)
+          ? data.rates
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
         setRouteRates(
-          data.map((r) => ({
+          rates.map((r) => ({
             vehicleId: r.vehicleId,
             price: r.price,
             isRoutePrice: true,
           }))
         );
+      })
+      .catch((err) => {
+        console.error("Failed to load route rates:", err);
+        setRouteRates([]);
       });
   }, [from, to]);
 
@@ -329,6 +400,16 @@ function BookingForm() {
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-8 h-8 rounded-full border border-[#C9A667]/30 border-t-[#C9A667] animate-spin" />
             <p className="text-[#8B8A8F] text-sm tracking-wide">Preparing your booking options…</p>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
+            <p className="text-[#F5F3EF] text-base">{loadError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-[#C9A667] hover:bg-[#E4C98F] text-[#0a0a0a] font-medium rounded-xl transition-colors duration-200"
+            >
+              Retry
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10">

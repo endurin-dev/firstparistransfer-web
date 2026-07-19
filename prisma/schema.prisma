@@ -7,7 +7,7 @@ datasource db {
 }
 
 model Booking {
-  id          String   @id
+  id          String   @id @default(cuid())
   tripType    String
   fromText    String
   toText      String
@@ -27,12 +27,12 @@ model Booking {
 }
 
 model Location {
-  id                                 String   @id
+  id                                 String   @id @default(cuid())
   name                               String
   category                           String
   active                             Boolean  @default(true)
   createdAt                          DateTime @default(now())
-  updatedAt                          DateTime
+  updatedAt                          DateTime @updatedAt
   Rate_Rate_fromLocationIdToLocation Rate[]   @relation("Rate_fromLocationIdToLocation")
   Rate_Rate_toLocationIdToLocation   Rate[]   @relation("Rate_toLocationIdToLocation")
 
@@ -40,13 +40,13 @@ model Location {
 }
 
 model Rate {
-  id                                     String   @id
+  id                                     String   @id @default(cuid())
   fromLocationId                         String
   toLocationId                           String
   vehicleId                              String
   price                                  Float
   createdAt                              DateTime @default(now())
-  updatedAt                              DateTime
+  updatedAt                              DateTime @updatedAt
   Location_Rate_fromLocationIdToLocation Location @relation("Rate_fromLocationIdToLocation", fields: [fromLocationId], references: [id], onDelete: Cascade)
   Location_Rate_toLocationIdToLocation   Location @relation("Rate_toLocationIdToLocation", fields: [toLocationId], references: [id], onDelete: Cascade)
   Vehicle                                Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
@@ -55,7 +55,7 @@ model Rate {
 }
 
 model User {
-  id        String   @id
+  id        String   @id @default(cuid())
   email     String   @unique
   password  String
   name      String?
@@ -64,7 +64,7 @@ model User {
 }
 
 model Vehicle {
-  id         String    @id
+  id         String    @id @default(cuid())
   name       String
   type       String
   passengers Int
@@ -73,7 +73,7 @@ model Vehicle {
   image      String
   active     Boolean   @default(true)
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime  @updatedAt
   Booking    Booking[]
   Rate       Rate[]
 }

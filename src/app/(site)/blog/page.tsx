@@ -1,206 +1,156 @@
 // app/blog/page.tsx
+import { Oswald, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { blogPosts, type BlogPost } from "@/lib/blog-posts";
 
-type BlogPost = {
-  slug: string;
-  title: string;
-  excerpt: string;
-  image: string;
-  author: string;
-  date: string;
-  readTime: string;
-  category: string;
-  featured?: boolean;
-};
+const oswald = Oswald({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+});
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
+});
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-mono",
+});
 
-const blogPosts: BlogPost[] = [
-  {
-    slug: "best-viewpoints-paris",
-    title: "The 7 Best Viewpoints in Paris (That Aren’t Just the Eiffel Tower)",
-    excerpt:
-      "From secret rooftops to panoramic terraces – discover where real Parisians go for breathtaking views.",
-    image:
-      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&h=800&fit=crop",
-    author: "Marie Dubois",
-    date: "December 10, 2025",
-    readTime: "6 min",
-    category: "Hidden Gems",
-    featured: true,
-  },
-  {
-    slug: "disneyland-paris-2025-guide",
-    title:
-      "Disneyland Paris 2025: New Rides, Best Tips & How to Skip Lines",
-    excerpt:
-      "Everything you need to know before your magical day – including the new Frozen land opening soon.",
-    image:
-      "https://images.unsplash.com/photo-1585488322438-211f7b8766c4?q=80&w=1176&auto=format&fit=crop",
-    author: "Lucas Martin",
-    date: "December 5, 2025",
-    readTime: "8 min",
-    category: "Family Travel",
-    featured: true,
-  },
-  {
-    slug: "versailles-secret-gardens",
-    title:
-      "Beyond the Hall of Mirrors: Secret Gardens & Hidden Groves of Versailles",
-    excerpt:
-      "Explore the lesser-known corners of the palace gardens where even Marie Antoinette loved to escape.",
-    image:
-      "https://plus.unsplash.com/premium_photo-1658527202479-07030551e2d2?q=80&w=1171&auto=format&fit=crop",
-    author: "Sophie Laurent",
-    date: "November 28, 2025",
-    readTime: "5 min",
-    category: "History & Culture",
-  },
-  {
-    slug: "montmartre-like-a-local",
-    title:
-      "How to Visit Montmartre Like a Local (And Avoid Tourist Traps)",
-    excerpt:
-      "Best bakeries, secret vineyards, quiet streets, and where artists actually live today.",
-    image:
-      "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=1200&h=800&fit=crop",
-    author: "Camille Renaud",
-    date: "November 20, 2025",
-    readTime: "7 min",
-    category: "Local Life",
-  },
-  {
-    slug: "paris-airport-guide-2025",
-    title:
-      "CDG vs Orly vs Beauvais: The Ultimate Airport Transfer Guide 2025",
-    excerpt:
-      "Which airport should you choose? Real transfer times, prices, and insider tips.",
-    image:
-      "https://images.unsplash.com/photo-1591289009723-aef0a1a8a211?q=80&w=1170&auto=format&fit=crop",
-    author: "Alexandre Dupont",
-    date: "November 15, 2025",
-    readTime: "10 min",
-    category: "Travel Tips",
-  },
-  {
-    slug: "paris-christmas-markets-2025",
-    title:
-      "Paris Christmas Markets 2025: Dates, Locations & Best Stalls",
-    excerpt:
-      "The complete guide to magical chalets, vin chaud, and where to find the giant Christmas tree.",
-    image:
-      "https://images.unsplash.com/photo-1765395087684-55b2552f204d?q=80&w=1171&auto=format&fit=crop",
-    author: "Élise Moreau",
-    date: "November 10, 2025",
-    readTime: "6 min",
-    category: "Seasonal",
-  },
-  {
-    slug: "best-rooftop-bars-paris",
-    title:
-      "Top 10 Rooftop Bars in Paris with Stunning Views 2025",
-    excerpt:
-      "From hidden gems to iconic terraces – the best places for sunset cocktails above the rooftops.",
-    image:
-      "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=1200&h=800&fit=crop",
-    author: "Julien Bernard",
-    date: "November 5, 2025",
-    readTime: "7 min",
-    category: "Nightlife",
-  },
-  {
-    slug: "one-day-in-paris-itinerary",
-    title:
-      "The Perfect One Day in Paris Itinerary (Written by a Local)",
-    excerpt:
-      "How to see the real Paris in 24 hours – including breakfast spots, secret passages, and sunset views.",
-    image:
-      "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=1200&h=800&fit=crop",
-    author: "Chloé Lambert",
-    date: "October 30, 2025",
-    readTime: "9 min",
-    category: "Itineraries",
-    featured: true,
-  },
-];
+function minutesOf(readTime: string): number {
+  const n = parseInt(readTime, 10);
+  return Number.isNaN(n) ? 1 : n;
+}
+
+function initialsOf(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+const maxMinutes = Math.max(...blogPosts.map((p) => minutesOf(p.readTime)));
+
+function PostCard({ post, large = false }: { post: BlogPost; large?: boolean }) {
+  const minutes = minutesOf(post.readTime);
+  const barWidth = Math.round((minutes / maxMinutes) * 100);
+
+  return (
+    <Link
+      href={`/blog/${post.slug}`}
+      className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_16px_40px_-24px_rgba(22,26,44,0.45)] transition-shadow hover:shadow-[0_20px_48px_-20px_rgba(22,26,44,0.55)]"
+    >
+      <div className={`relative overflow-hidden ${large ? "aspect-[4/3]" : "aspect-video"}`}>
+        <img
+          src={post.image}
+          alt={post.title}
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#161A2C]/50 via-transparent to-transparent" />
+
+        {post.featured && (
+          <span className="font-[family-name:var(--font-mono)] absolute right-4 top-4 rounded-full bg-[#C9A24B] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#161A2C]">
+            Featured
+          </span>
+        )}
+
+        <div className="absolute left-4 top-4 flex h-16 w-16 flex-col items-center justify-center rounded-full border-2 border-dashed border-[#C9A24B] bg-white/90 text-center leading-none">
+          <span className="font-[family-name:var(--font-mono)] text-[8px] font-semibold uppercase tracking-wide text-[#161A2C]">
+            {post.category.length > 12 ? post.category.split(" ")[0] : post.category}
+          </span>
+          <span className="my-1 h-px w-8 bg-[#D8CFAF]" />
+          <span className="font-[family-name:var(--font-mono)] text-[10px] font-semibold text-[#8A7A4E]">
+            {post.readTime}
+          </span>
+        </div>
+      </div>
+
+      <div className={`flex flex-1 flex-col ${large ? "p-8" : "p-6"}`}>
+        <h3
+          className={`font-[family-name:var(--font-display)] font-semibold leading-snug text-[#161A2C] ${
+            large ? "text-2xl" : "text-lg"
+          }`}
+        >
+          {post.title}
+        </h3>
+        <p className={`mt-3 text-[#5B5748] ${large ? "text-sm" : "text-[13px]"} line-clamp-3`}>
+          {post.excerpt}
+        </p>
+
+        <div className="mt-5 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#161A2C] text-[10px] font-semibold text-[#E4C878]">
+            {initialsOf(post.author)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold text-[#161A2C]">{post.author}</p>
+            <p className="font-[family-name:var(--font-mono)] flex items-center gap-1.5 text-[10px] text-[#8A7A4E]">
+              <Calendar className="h-3 w-3" /> {post.date}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-[#EFEBE1]">
+            <div className="h-full rounded-full bg-[#C9A24B]" style={{ width: `${barWidth}%` }} />
+          </div>
+          <p className="mt-1.5 flex items-center gap-1 text-[10px] text-[#8A7A4E]">
+            <Clock className="h-3 w-3" /> {post.readTime} read
+          </p>
+        </div>
+
+        <div className="mt-5 flex items-center gap-1.5 border-t border-[#EFEBE1] pt-4 text-xs font-semibold uppercase tracking-wide text-[#161A2C]">
+          Read article
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export default function BlogPage() {
+  const featured = blogPosts.filter((p) => p.featured);
+  const rest = blogPosts.filter((p) => !p.featured);
+
   return (
-    <div className="min-h-screen bg-white">
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1591289009723-aef0a1a8a211?q=80&w=1170&auto=format&fit=crop')",
-          }}
-        />
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="relative text-center text-white px-6 max-w-5xl mx-auto z-10">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6">
-            Paris Insider Blog
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-200">
-            Hidden gems • Local secrets • Expert tips from real Parisians
-          </p>
+    <div
+      className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable} font-[family-name:var(--font-body)] min-h-screen bg-[#EFEBE1]`}
+    >
+      <section className="bg-[#161A2C] px-4 py-24 text-center sm:px-6">
+        <p className="font-[family-name:var(--font-mono)] text-xs font-semibold uppercase tracking-[0.3em] text-[#E4C878]">
+          Dispatches from the team
+        </p>
+        <h1 className="font-[family-name:var(--font-display)] mt-4 text-5xl font-semibold uppercase tracking-wide text-[#F1E9CE] sm:text-7xl">
+          Paris Insider
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-lg text-[#9AA1C2]">
+          Hidden gems, local secrets, and honest travel tips — written by the people who actually live here.
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+        <h2 className="font-[family-name:var(--font-display)] mb-8 text-2xl font-semibold uppercase tracking-wide text-[#161A2C]">
+          Featured
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {featured.map((post) => (
+            <PostCard key={post.slug} post={post} large />
+          ))}
         </div>
       </section>
 
-      <section className="py-20 px-6 max-w-7xl mx-auto -mt-32 relative z-20">
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {blogPosts.map((post) => (
-            <Link
-              key={post.slug}
-              href={`/blog/${post.slug}`}
-              className="group block bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition"
-            >
-              <div className="aspect-video relative overflow-hidden">
-                <img
-                  src={post.image}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-
-                <div className="absolute top-4 left-4 bg-black/80 text-white px-4 py-2 rounded-full text-sm">
-                  {post.category}
-                </div>
-
-                {post.featured && (
-                  <div className="absolute top-4 right-4 bg-yellow-500 text-black px-4 py-2 rounded-full text-sm font-bold">
-                    Featured
-                  </div>
-                )}
-              </div>
-
-              <div className="p-8">
-                <h3 className="text-2xl font-bold mb-4 line-clamp-2">
-                  {post.title}
-                </h3>
-                <p className="text-gray-600 mb-6 line-clamp-3">
-                  {post.excerpt}
-                </p>
-
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
-                  <div className="flex gap-4">
-                    <span className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {post.date}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {post.readTime}
-                    </span>
-                  </div>
-                  <span className="font-medium text-black">
-                    {post.author}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 font-semibold">
-                  Read Article
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition" />
-                </div>
-              </div>
-            </Link>
+      <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6">
+        <h2 className="font-[family-name:var(--font-display)] mb-8 text-2xl font-semibold uppercase tracking-wide text-[#161A2C]">
+          More from the journal
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {rest.map((post) => (
+            <PostCard key={post.slug} post={post} />
           ))}
         </div>
       </section>

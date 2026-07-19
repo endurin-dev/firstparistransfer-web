@@ -26,6 +26,8 @@ type RatesBoardProps = {
   lastUpdated: string | null;
 };
 
+// International transfer bookings are usually quoted in USD.
+// Switch to "LKR" here if you're pricing in rupees.
 const CURRENCY = "USD";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -91,61 +93,97 @@ export default function RatesBoard({ routes, vehicles, lastUpdated }: RatesBoard
   }
 
   return (
-    <section className="font-[family-name:var(--font-body)] min-h-screen bg-[#FAFAF8] px-4 py-16 sm:px-6 lg:px-8">
+    <section className="font-[family-name:var(--font-body)] min-h-screen bg-[#EFEBE1] px-4 py-14 sm:px-6 lg:px-10">
       <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-10 flex flex-col gap-3 border-b border-[#E7E3DC] pb-8 sm:flex-row sm:items-end sm:justify-between">
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8B8577]">
-              Fixed fares
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8A7A4E]">
+              Paris chauffeur transfers
             </p>
-            <h1 className="font-[family-name:var(--font-display)] mt-1 text-4xl font-semibold uppercase tracking-wide text-[#1D1B18] sm:text-5xl">
-              Transfer Rates
+            <h1 className="font-[family-name:var(--font-display)] mt-2 text-4xl font-semibold uppercase tracking-wide text-[#161A2C] sm:text-5xl">
+              Fare Board
             </h1>
-          </div>
-          {updated && (
-            <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-widest text-[#8B8577]">
-              Board updated {updated}
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-[#5B5748]">
+              Fixed door-to-door pricing by route and vehicle. No meter, no surge.
             </p>
-          )}
+          </div>
+          <div className="flex items-center gap-2 self-start rounded-full border border-[#D8CFAF] bg-white/60 px-3.5 py-1.5 sm:self-auto">
+            <span className="board-pulse-dot relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#C9A24B] opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#C9A24B]" />
+            </span>
+            <span className="font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-widest text-[#5B5748]">
+              {updated ? <>Refreshed {updated}</> : "Awaiting first refresh"}
+            </span>
+          </div>
         </div>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search a location…"
-            aria-label="Search a location"
-            className="w-full rounded-sm border border-[#DEDACF] bg-white px-3 py-2 text-sm text-[#1D1B18] placeholder:text-[#B3AC9C] focus:border-[#1D1B18] focus:outline-none focus:ring-1 focus:ring-[#1D1B18] sm:max-w-xs"
-          />
-          {categories.length > 1 && (
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              aria-label="Filter by category"
-              className="w-full rounded-sm border border-[#DEDACF] bg-white px-3 py-2 text-sm text-[#1D1B18] focus:border-[#1D1B18] focus:outline-none focus:ring-1 focus:ring-[#1D1B18] sm:w-56"
+        {/* Controls */}
+        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-[#D8CFAF] bg-white/70 p-4 sm:flex-row sm:items-center sm:p-3">
+          <div className="relative w-full sm:max-w-xs">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9C9376]"
             >
-              <option value="all">All categories</option>
+              <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M13.5 13.5L17.5 17.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search a location…"
+              aria-label="Search a location"
+              className="w-full rounded-full border border-[#D8CFAF] bg-white py-2 pl-9 pr-3 text-sm text-[#161A2C] placeholder:text-[#9C9376] focus:border-[#161A2C] focus:outline-none focus:ring-1 focus:ring-[#161A2C]"
+            />
+          </div>
+
+          {categories.length > 1 && (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by area">
+              <button
+                type="button"
+                onClick={() => setCategory("all")}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                  category === "all"
+                    ? "bg-[#161A2C] text-[#F1E9CE]"
+                    : "bg-transparent text-[#5B5748] hover:bg-[#E7E0C8]"
+                }`}
+              >
+                All areas
+              </button>
               {categories.map((c) => (
-                <option key={c} value={c}>
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                    category === c
+                      ? "bg-[#161A2C] text-[#F1E9CE]"
+                      : "bg-transparent text-[#5B5748] hover:bg-[#E7E0C8]"
+                  }`}
+                >
                   {c}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           )}
-          <p className="text-xs text-[#8B8577] sm:ml-auto">
+
+          <p className="font-[family-name:var(--font-mono)] text-xs text-[#8A7A4E] sm:ml-auto">
             {filteredRoutes.length} route{filteredRoutes.length === 1 ? "" : "s"}
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-sm bg-[#14161B]">
+        {/* Board */}
+        <div className="board-panel overflow-hidden rounded-2xl bg-[#161A2C] shadow-[0_20px_50px_-25px_rgba(22,26,44,0.6)]">
           {safeRoutes.length === 0 ? (
-            <p className="px-4 py-16 text-center text-sm text-[#6B6E78]">
-              Rates haven&apos;t been published yet — check back soon.
+            <p className="px-4 py-20 text-center text-sm text-[#8E93A8]">
+              No fares published yet — check back soon.
             </p>
           ) : filteredRoutes.length === 0 ? (
-            <div className="px-4 py-16 text-center">
-              <p className="text-sm text-[#6B6E78]">
+            <div className="px-4 py-20 text-center">
+              <p className="text-sm text-[#8E93A8]">
                 {query.trim() ? (
                   <>No routes match &quot;{query}&quot;.</>
                 ) : (
@@ -156,7 +194,7 @@ export default function RatesBoard({ routes, vehicles, lastUpdated }: RatesBoard
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#F2B441] hover:underline"
+                  className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#C9A24B] hover:underline"
                 >
                   Clear filters
                 </button>
@@ -164,90 +202,70 @@ export default function RatesBoard({ routes, vehicles, lastUpdated }: RatesBoard
             </div>
           ) : (
             <>
-              <table className="hidden w-full border-collapse md:table">
-                <caption className="sr-only">Transfer rates by route and vehicle type</caption>
-                <thead>
-                  <tr className="border-b border-[#2A2D34]">
-                    <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-widest text-[#6B6E78]">
-                      Route
-                    </th>
-                    {safeVehicles.map((v) => (
-                      <th key={v.id} className="px-5 py-4 text-right">
-                        <span className="font-[family-name:var(--font-display)] block text-xs uppercase tracking-wide text-[#D9D5CA]">
-                          {v.name}
-                        </span>
-                        <span className="mt-0.5 block text-[10px] font-normal text-[#6B6E78]">
-                          {v.passengers} pax · {v.luggage} bags
-                        </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRoutes.map((route, i) => {
-                    const values = safeVehicles
-                      .map((v) => route.prices[v.id])
-                      .filter((v): v is number => typeof v === "number");
-                    const lowest = values.length ? Math.min(...values) : undefined;
+              {/* Board header row — desktop only */}
+              <div
+                className="hidden border-b border-[#2A3050] px-6 py-4 md:grid md:items-end md:gap-4"
+                style={{ gridTemplateColumns: `1.4fr repeat(${safeVehicles.length}, minmax(84px, 1fr))` }}
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6280]">
+                  Route
+                </span>
+                {safeVehicles.map((v) => (
+                  <div key={v.id} className="text-right">
+                    <span className="font-[family-name:var(--font-display)] block text-xs uppercase tracking-wide text-[#D9DCEC]">
+                      {v.name}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] font-normal text-[#5C6280]">
+                      {v.passengers} pax · {v.luggage} bags
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-                    return (
-                      <tr
-                        key={`${route.fromLocation.name}-${route.toLocation.name}-${i}`}
-                        className="border-b border-[#2A2D34] last:border-0"
-                      >
-                        <td className="px-5 py-4 text-sm text-[#D9D5CA]">
-                          {route.fromLocation.name}
-                          <span className="mx-2 text-[#4A4D55]">→</span>
-                          {route.toLocation.name}
-                        </td>
-                        {safeVehicles.map((v) => {
-                          const price = route.prices[v.id];
-                          const isLowest = values.length > 1 && price !== undefined && price === lowest;
-                          return (
-                            <td
-                              key={v.id}
-                              className={`font-[family-name:var(--font-mono)] px-5 py-4 text-right text-sm tabular-nums ${
-                                isLowest ? "font-semibold text-[#F2B441]" : "text-[#B08A4E]"
-                              }`}
-                            >
-                              {formatPrice(price)}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              <div className="divide-y divide-[#2A2D34] md:hidden">
+              {/* Rows */}
+              <div className="divide-y divide-[#232A48]">
                 {filteredRoutes.map((route, i) => {
                   const values = safeVehicles
                     .map((v) => route.prices[v.id])
                     .filter((v): v is number => typeof v === "number");
-                  const lowest = values.length ? Math.min(...values) : undefined;
+                  const lowest = values.length > 1 ? Math.min(...values) : undefined;
 
                   return (
-                    <div key={`${route.fromLocation.name}-${route.toLocation.name}-${i}`} className="px-4 py-4">
-                      <p className="text-sm text-[#D9D5CA]">
-                        {route.fromLocation.name}
-                        <span className="mx-2 text-[#4A4D55]">→</span>
-                        {route.toLocation.name}
+                    <div
+                      key={`${route.fromLocation.name}-${route.toLocation.name}-${i}`}
+                      className="board-row flex flex-col gap-3 px-5 py-4 md:grid md:items-center md:gap-4 md:px-6"
+                      style={{
+                        animationDelay: `${Math.min(i, 14) * 45}ms`,
+                        gridTemplateColumns: `1.4fr repeat(${safeVehicles.length}, minmax(84px, 1fr))`,
+                      }}
+                    >
+                      <p className="text-sm text-[#D9DCEC]">
+                        <span>{route.fromLocation.name}</span>
+                        <span className="mx-2 inline-block align-middle text-[#4A5078]">
+                          <svg viewBox="0 0 16 10" width="16" height="10" fill="none">
+                            <path
+                              d="M0 5H14.5M10 1L14.5 5L10 9"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        <span>{route.toLocation.name}</span>
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5">
+
+                      <div className="flex flex-wrap gap-2 md:contents">
                         {safeVehicles.map((v) => {
                           const price = route.prices[v.id];
-                          const isLowest = values.length > 1 && price !== undefined && price === lowest;
+                          const isLowest = lowest !== undefined && price === lowest;
                           return (
-                            <div key={v.id} className="flex items-baseline gap-1.5">
-                              <span className="text-[10px] uppercase tracking-wide text-[#6B6E78]">
-                                {v.name}
-                              </span>
-                              <span
-                                className={`font-[family-name:var(--font-mono)] text-sm tabular-nums ${
-                                  isLowest ? "font-semibold text-[#F2B441]" : "text-[#B08A4E]"
-                                }`}
-                              >
+                            <div
+                              key={v.id}
+                              className={`flap-tile md:w-full ${isLowest ? "flap-tile--lowest" : ""}`}
+                            >
+                              <span className="flap-tile__label md:hidden">{v.name}</span>
+                              <span className="flap-tile__value font-[family-name:var(--font-mono)]">
                                 {formatPrice(price)}
                               </span>
                             </div>
@@ -258,10 +276,90 @@ export default function RatesBoard({ routes, vehicles, lastUpdated }: RatesBoard
                   );
                 })}
               </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-2 border-t border-[#232A48] px-6 py-3">
+                <span className="flap-tile flap-tile--lowest flap-tile--legend">
+                  <span className="flap-tile__value font-[family-name:var(--font-mono)]">$0</span>
+                </span>
+                <span className="text-[11px] text-[#5C6280]">marks the lowest fare on that route</span>
+              </div>
             </>
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .flap-tile {
+          position: relative;
+          display: inline-flex;
+          min-width: 4.4rem;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0.1rem;
+          border-radius: 0.4rem;
+          background: linear-gradient(180deg, #1e2542 0%, #171d34 100%);
+          padding: 0.4rem 0.65rem;
+          overflow: hidden;
+        }
+        .flap-tile::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 50%;
+          height: 1px;
+          background: rgba(0, 0, 0, 0.55);
+          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        .flap-tile__label {
+          font-size: 0.6rem;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #5c6280;
+        }
+        .flap-tile__value {
+          font-size: 0.9rem;
+          font-variant-numeric: tabular-nums;
+          color: #9aa1c2;
+        }
+        .flap-tile--lowest {
+          outline: 1px solid #c9a24b;
+          outline-offset: 1px;
+        }
+        .flap-tile--lowest .flap-tile__value {
+          color: #e4c878;
+          font-weight: 600;
+        }
+        .flap-tile--legend {
+          min-width: 2.75rem;
+          padding: 0.25rem 0.5rem;
+          transform: scale(0.85);
+          transform-origin: left center;
+        }
+        .board-row {
+          animation: board-row-in 420ms ease-out backwards;
+        }
+        @keyframes board-row-in {
+          from {
+            opacity: 0;
+            transform: translateY(4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .board-row {
+            animation: none;
+          }
+          .board-pulse-dot .animate-ping {
+            animation: none;
+          }
+        }
+      `}</style>
     </section>
   );
 }

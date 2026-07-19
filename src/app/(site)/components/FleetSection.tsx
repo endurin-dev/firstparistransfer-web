@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import { useRef, useState } from "react";
 
 export default function FleetSection() {
   const vehicles = [
@@ -12,11 +13,51 @@ export default function FleetSection() {
 
   const loop = [...vehicles, ...vehicles];
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ active: false, startX: 0, startScroll: 0 });
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoplay, setAutoplay] = useState(true);
+
+  const pauseAutoplay = () => {
+    setAutoplay(false);
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(() => {
+      if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+      setAutoplay(true);
+    }, 4000);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!scrollRef.current) return;
+    dragState.current = { active: true, startX: e.clientX, startScroll: scrollRef.current.scrollLeft };
+    pauseAutoplay();
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragState.current.active || !scrollRef.current) return;
+    const dx = e.clientX - dragState.current.startX;
+    scrollRef.current.scrollLeft = dragState.current.startScroll - dx;
+  };
+
+  const endDrag = () => {
+    dragState.current.active = false;
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!scrollRef.current) return;
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      pauseAutoplay();
+      const cardWidth = scrollRef.current.firstElementChild?.clientWidth ?? 300;
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      scrollRef.current.scrollBy({ left: dir * (cardWidth + 20), behavior: "smooth" });
+    }
+  };
+
   return (
     <section className="py-16 sm:py-20 md:py-28 lg:py-32 bg-black w-full overflow-hidden">
       <div className="max-w-full mx-auto px-4 sm:px-6">
 
-        <div className="text-center mb-10 sm:mb-14 md:mb-20">
+        <div className="text-center mb-3 sm:mb-4">
           <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white">
             Luxury Fleet
           </h2>
@@ -25,26 +66,47 @@ export default function FleetSection() {
           </p>
         </div>
 
-        <div className="relative h-[260px] sm:h-[300px] md:h-[330px] lg:h-[350px] overflow-hidden">
-          <div className="absolute inset-0 flex animate-smoothSlideWide motion-reduce:animate-none hover:[animation-play-state:paused] gap-4 sm:gap-5 md:gap-6">
+        <p className="text-center text-white/40 text-[11px] sm:text-xs uppercase tracking-wider mb-8 sm:mb-10 md:mb-14">
+          Swipe, drag, or scroll to browse
+        </p>
+
+        <div className="relative h-[260px] sm:h-[300px] md:h-[330px] lg:h-[350px]">
+          <div
+            ref={scrollRef}
+            role="region"
+            aria-label="Fleet carousel, scroll horizontally to browse vehicles"
+            tabIndex={0}
+            onScroll={pauseAutoplay}
+            onWheel={pauseAutoplay}
+            onTouchStart={pauseAutoplay}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerLeave={endDrag}
+            onKeyDown={onKeyDown}
+            className={`flex h-full gap-4 sm:gap-5 md:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth cursor-grab active:cursor-grabbing select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 rounded-2xl ${
+              autoplay ? "animate-smoothSlideWide motion-reduce:animate-none" : ""
+            }`}
+          >
             {loop.map((car, i) => (
               <div
                 key={i}
-                className="relative w-[240px] sm:w-[320px] md:w-[420px] lg:w-[500px] h-full shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-white/5 backdrop-blur-[40px] border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300"
+                className="relative w-[240px] sm:w-[320px] md:w-[420px] lg:w-[500px] h-full shrink-0 snap-start overflow-hidden rounded-2xl sm:rounded-3xl bg-white/5 backdrop-blur-[40px] border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300"
               >
                 <Image
                   src={car.image}
                   alt={car.name}
                   fill
                   sizes="(max-width: 640px) 240px, (max-width: 768px) 320px, (max-width: 1024px) 420px, 500px"
-                  className="object-cover rounded-2xl sm:rounded-3xl"
+                  className="object-cover rounded-2xl sm:rounded-3xl pointer-events-none"
                   unoptimized
+                  draggable={false}
                 />
 
                 {/* Contrast scrim — keeps text legible regardless of photo brightness or card width */}
                 <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10 rounded-2xl sm:rounded-3xl pointer-events-none" />
 
-                <div className="relative h-full w-[78%] sm:w-3/5 md:w-1/2 p-4 sm:p-5 md:p-6 flex flex-col justify-center">
+                <div className="relative h-full w-[78%] sm:w-3/5 md:w-1/2 p-4 sm:p-5 md:p-6 flex flex-col justify-center pointer-events-none">
                   <h3 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-extrabold text-white leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">
                     {car.name}
                   </h3>
@@ -75,6 +137,10 @@ export default function FleetSection() {
               </div>
             ))}
           </div>
+
+          {/* edge fades hint that content continues off-screen */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 bg-gradient-to-r from-black to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-12 bg-gradient-to-l from-black to-transparent" />
         </div>
       </div>
     </section>

@@ -27,29 +27,29 @@ model Booking {
 }
 
 model Location {
-  id                                 String   @id @default(cuid())
-  name                               String
-  category                           String
-  active                             Boolean  @default(true)
-  createdAt                          DateTime @default(now())
-  updatedAt                          DateTime @updatedAt
-  Rate_Rate_fromLocationIdToLocation Rate[]   @relation("Rate_fromLocationIdToLocation")
-  Rate_Rate_toLocationIdToLocation   Rate[]   @relation("Rate_toLocationIdToLocation")
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ratesFrom Rate[]   @relation("Rate_fromLocationIdToLocation")
+  ratesTo   Rate[]   @relation("Rate_toLocationIdToLocation")
 
   @@unique([name, category])
 }
 
 model Rate {
-  id                                     String   @id @default(cuid())
-  fromLocationId                         String
-  toLocationId                           String
-  vehicleId                              String
-  price                                  Float
-  createdAt                              DateTime @default(now())
-  updatedAt                              DateTime @updatedAt
-  Location_Rate_fromLocationIdToLocation Location @relation("Rate_fromLocationIdToLocation", fields: [fromLocationId], references: [id], onDelete: Cascade)
-  Location_Rate_toLocationIdToLocation   Location @relation("Rate_toLocationIdToLocation", fields: [toLocationId], references: [id], onDelete: Cascade)
-  Vehicle                                Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  fromLocationId String
+  toLocationId   String
+  vehicleId      String
+  price          Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  fromLocation   Location @relation("Rate_fromLocationIdToLocation", fields: [fromLocationId], references: [id], onDelete: Cascade)
+  toLocation     Location @relation("Rate_toLocationIdToLocation", fields: [toLocationId], references: [id], onDelete: Cascade)
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@unique([fromLocationId, toLocationId, vehicleId])
 }

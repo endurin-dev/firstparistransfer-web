@@ -13,9 +13,9 @@ export async function GET(req: Request) {
       ...(toLocationId ? { toLocationId } : {}),
     },
     include: {
-      Location_Rate_fromLocationIdToLocation: true,
-      Location_Rate_toLocationIdToLocation: true,
-      Vehicle: true,
+      fromLocation: true,
+      toLocation: true,
+      vehicle: true,
     },
     orderBy: { updatedAt: "desc" },
   });
